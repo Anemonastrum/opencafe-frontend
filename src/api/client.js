@@ -1,8 +1,10 @@
+import axios from 'axios';
+
 export class ApiError extends Error {
   constructor(message, status = 0, code) { super(message); this.status = status; this.code = code; }
 }
 const browserLock = (name, run) => globalThis.navigator?.locks ? navigator.locks.request(name, run) : run();
-export function createClient({ fetchImpl = (...args) => fetch(...args), lock = browserLock, onSession } = {}) {
+export function createClient({ http = axios.create(), lock = browserLock, onSession } = {}) {
   let token = null, generation = 0, refreshFlight, restoration;
   let state = { status: 'loading', user: null, error: null, generation };
   const listeners = new Set();
@@ -10,17 +12,20 @@ export function createClient({ fetchImpl = (...args) => fetch(...args), lock = b
   const invalidate = (next, keepToken = false) => { ++generation; if (!keepToken) token = null; emit(next); };
   const check = expected => { if (expected !== generation) throw new ApiError('Session changed', 0, 'SESSION_CHANGED'); };
   async function raw(path, { method = 'GET', body, signal, response = 'json', accessToken } = {}) {
-    const headers = new Headers({ Accept: response === 'json' ? 'application/json' : '*/*' });
-    if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
-    if (body !== undefined && !(body instanceof FormData)) { headers.set('Content-Type', 'application/json'); body = JSON.stringify(body); }
-    const res = await fetchImpl(path, { method, body, headers, signal, credentials: 'same-origin', cache: 'no-store' });
-    const type = res.headers.get('content-type') || '';
-    if (!res.ok) {
-      const data = type.includes('application/json') ? await res.json().catch(() => ({})) : {};
-      throw new ApiError(data.message || `Request failed (${res.status})`, res.status, data.code);
+    const headers = { Accept: response === 'json' ? 'application/json' : '*/*', 'Cache-Control': 'no-store' };
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+    if (body !== undefined && !(body instanceof FormData)) headers['Content-Type'] = 'application/json';
+    const res = await http.request({ url: path, method, data: body, headers, signal, responseType: response, validateStatus: () => true });
+    const type = res.headers['content-type'] || '';
+    if (res.status < 200 || res.status >= 300) {
+      let data = res.data;
+      if (type.includes('application/json') && (data instanceof Blob || typeof data === 'string')) {
+        try { data = JSON.parse(data instanceof Blob ? await data.text() : data); } catch { data = {}; }
+      }
+      throw new ApiError(data?.message || `Request failed (${res.status})`, res.status, data?.code);
     }
-    if (response === 'blob') return { blob: await res.blob(), type };
-    return res.status === 204 ? null : res.json();
+    if (response === 'blob') return { blob: res.data instanceof Blob ? res.data : new Blob([res.data], { type }), type };
+    return res.status === 204 ? null : res.data;
   }
   async function accept(data, expected, previousUser) {
     check(expected);
