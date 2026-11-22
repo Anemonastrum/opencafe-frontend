@@ -1,68 +1,21 @@
-import React, { useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import './css/style.css';
-import './charts/ChartjsConfig';
-
-import { Toaster } from 'react-hot-toast';
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import {Routes,Route,Navigate} from 'react-router-dom';
+import {Toaster} from 'react-hot-toast';
+import {AuthProvider,useAuth} from './context/AuthContext';
 import ProtectedRoute from './context/ProtectedRoutes';
-
-import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
-import Logbook from './pages/Logbook';
-import Organization from './pages/Organization';
-import Category from './pages/Category';
-import Mailing from './pages/Mailing';
-import Profile from './pages/Profile';
-import Member from './pages/Member';
-import Disposition from './pages/Disposition';
+import ChangePassword from './pages/ChangePassword';
 import Unauthorized from './pages/Unauthorized';
-
-import { BeatLoader } from 'react-spinners';
-
-function AppContent() {
-  const { loading } = useAuth();
-  const location = useLocation();
-
-  useEffect(() => {
-    document.querySelector('html').style.scrollBehavior = 'auto'
-    window.scroll({ top: 0 });
-    document.querySelector('html').style.scrollBehavior = '';
-  }, [location.pathname]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-       <BeatLoader size={12} color="#a6e3a1" />
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <Toaster position="top-right" />
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/unauthorized" element={<Unauthorized />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/logbook/:sub" element={<ProtectedRoute><Logbook /></ProtectedRoute>} />
-        <Route path="/mail/:sub" element={<ProtectedRoute allowedRoles={['superadmin', 'admin']}><Mailing /></ProtectedRoute>} />
-        <Route path="/profile/:sub" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/users/:sub" element={<ProtectedRoute allowedRoles={['superadmin']}><Member /></ProtectedRoute>} />
-        <Route path="/organization" element={<ProtectedRoute allowedRoles={['superadmin']}><Organization /></ProtectedRoute>} />
-        <Route path="/category" element={<ProtectedRoute allowedRoles={['superadmin']}><Category /></ProtectedRoute>} />
-        <Route path="/aksi/:sub" element={<ProtectedRoute allowedRoles={['superadmin']}><Disposition /></ProtectedRoute>} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/profile" element={<Navigate to="/profile/data" replace />} />
-      </Routes>
-    </>
-  );
-}
-
-export default function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
-}
+import AdminLayout from './components/AdminLayout';
+import NotFound from './pages/NotFound';
+import Dashboard from './pages/Dashboard';
+import Category from './pages/Category';
+import Products from './pages/Products';
+import CafeSettings from './pages/CafeSettings';
+import Cashiers from './pages/Cashiers';
+import Profile from './pages/Profile';
+import SalesReport from './pages/SalesReport';
+import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
+import './css/style.css';
+function Content(){const {status,error,retrySession}=useAuth();if(status==='loading')return <div role="status" className="min-h-screen grid place-items-center">Loading session…</div>;if(status==='error')return <main className="min-h-screen grid place-items-center"><section className="bg-white dark:bg-gray-800 rounded-xl p-8"><h1 className="text-xl font-bold">Session unavailable</h1><p role="alert" className="my-4">{error?.message}</p><button className="btn bg-violet-600 text-white" onClick={retrySession}>Restore session</button></section></main>;return <Routes><Route path="/login" element={<Login/>}/><Route path="/change-password" element={<ChangePassword/>}/><Route path="/unauthorized" element={<Unauthorized/>}/><Route element={<ProtectedRoute/>}><Route element={<AdminLayout/>}><Route path="/dashboard" element={<Dashboard/>}/><Route path="/categories" element={<Category/>}/><Route path="/products" element={<Products/>}/><Route path="/cafe-settings" element={<CafeSettings/>}/><Route path="/cashiers" element={<Cashiers/>}/><Route path="/profile" element={<Profile/>}/><Route path="/sales-report" element={<SalesReport/>}/><Route path="/orders" element={<Orders/>}/><Route path="/orders/:id" element={<OrderDetail/>}/></Route></Route><Route path="/" element={<Navigate to="/dashboard" replace/>}/><Route path="*" element={<NotFound/>}/></Routes>;}
+export default function App(){return <AuthProvider><Toaster position="top-right"/><Content/></AuthProvider>;}

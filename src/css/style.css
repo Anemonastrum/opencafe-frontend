@@ -178,6 +178,15 @@
   }
 }
 
+/* Keep scroll available without visible tracks or thumbs. */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
+button:not(:disabled), select { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .5; }
+:focus-visible { outline: 2px solid var(--color-violet-500); outline-offset: 3px; }
+body { font-family: var(--font-inter); color: var(--color-gray-700); background: var(--color-gray-100); }
+.dark body { color: var(--color-gray-300); background: var(--color-gray-900); }
+@media (width < 1024px) { .admin-sidebar[data-open="false"] { visibility: hidden; } }
 .ProseMirror {
   min-height: 150px;
   outline: none;

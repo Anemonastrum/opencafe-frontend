@@ -1,76 +1,13 @@
-import React, { useState } from "react";
-
-import Sidebar from "../partials/Sidebar";
-import Header from "../partials/Header";
-import Datepicker from "../components/Datepicker";
-import MailCategory from "../partials/category/MailCategory";
-
-function Category() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
-      {/* Content area */}
-      <div className="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-        {/*  Site header */}
-        <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
-        <main className="grow">
-          <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-            {/* Dashboard actions */}
-            <div className="sm:flex sm:justify-between sm:items-center mb-8">
-              {/* Left: Breadcrumbs as Title */}
-              <div className="ms-1 mb-4 sm:mb-0">
-                <nav
-                  className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400"
-                  aria-label="Breadcrumb"
-                >
-                  <a
-                    href="/"
-                    className="hover:text-gray-700 dark:hover:text-gray-300"
-                  >
-                    Home
-                  </a>
-                  <svg
-                    className="h-4 w-4 text-gray-400 dark:text-gray-500"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                  <span className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">
-                    Kategori Surat Keluar
-                  </span>
-                </nav>
-              </div>
-
-              {/* Right: Actions */}
-              <div className="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
-                {/* Datepicker built with React Day Picker */}
-                <Datepicker align="right" />
-                {/* Add view button */}
-              </div>
-            </div>
-
-            {/* Cards */}
-            <div className="grid grid-cols-12 gap-6">
-
-                <MailCategory />
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
-  );
+import {useState} from 'react';
+import {adminApi as api} from '../api/admin';
+import {useResource} from '../hooks/useResource';
+import {textError} from '../lib/admin';
+import {Card,Field,PageState,Pagination,Table,Cell,ConfirmDialog,FormError,primary,secondary} from '../components/AdminUI';
+import toast from 'react-hot-toast';
+export default function Category(){
+ const [page,setPage]=useState(1),[search,setSearch]=useState(''),[draft,setDraft]=useState(''),[edit,setEdit]=useState(null),[name,setName]=useState(''),[remove,setRemove]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const resource=useResource(signal=>api.listCategories({page,limit:20,search},{signal}),[page,search]);
+ async function save(e){e.preventDefault();const err=textError(name,100);if(err){setError(err);return;}setBusy(true);setError('');try{const result=await api.saveCategory(edit?.id??null,{name:name.trim()});await api.listCategories({search:result.category.name,limit:1});setEdit(null);setName('');resource.reload();toast.success('Category saved.');}catch(e){setError(e.message);}finally{setBusy(false);}}
+ async function destroy(){setBusy(true);setError('');try{await api.deleteCategory(remove.id);const after=await api.listCategories({page,limit:20,search});if(!after.categories.length&&page>1)setPage(page-1);else resource.reload();setRemove(null);toast.success('Category deleted.');}catch(e){setError(e.message);}finally{setBusy(false);}}
+ return <div className="space-y-6"><Card title={edit?'Rename category':'New category'}><form onSubmit={save} className="flex flex-wrap gap-3 items-end"><div className="grow"><Field label="Category name" value={name} onChange={e=>setName(e.target.value)} required maxLength={100}/></div><button type="submit" className={primary} disabled={busy}>{busy?'Saving…':edit?'Save changes':'Add category'}</button>{edit&&<button type="button" className={secondary} onClick={()=>{setEdit(null);setName('');setError('');}}>Cancel edit</button>}<FormError error={remove?'':error}/></form></Card><Card title="Categories"><form className="flex gap-3 mb-5" onSubmit={e=>{e.preventDefault();setSearch(draft.trim());setPage(1);}}><div className="grow"><Field label="Search categories" value={draft} onChange={e=>setDraft(e.target.value)} maxLength={150}/></div><button type="submit" className={`${secondary} self-end`}>Search</button></form><PageState resource={resource} empty={resource.data?.categories.length===0}><Table headers={['Name','Actions']} label="Categories"><>{resource.data?.categories.map(row=><tr key={row.id}><Cell>{row.name}</Cell><Cell><div className="flex gap-3"><button className="text-violet-600 dark:text-violet-300" onClick={()=>{setEdit(row);setName(row.name);setError('');}}>Edit <span className="sr-only">{row.name}</span></button><button className="text-red-600 dark:text-red-400" onClick={()=>{setRemove(row);setError('');}}>Delete <span className="sr-only">{row.name}</span></button></div></Cell></tr>)}</></Table></PageState>{resource.data&&<Pagination page={page} total={resource.data.total} onChange={setPage}/>}</Card>{remove&&<ConfirmDialog title="Delete category" busy={busy} onClose={()=>setRemove(null)} onConfirm={destroy} confirmLabel="Delete category"><p>Delete “{remove.name}”? Categories referenced by products, including unavailable products, cannot be deleted.</p><FormError error={error}/></ConfirmDialog>}</div>;
 }
-
-export default Category;
