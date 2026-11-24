@@ -1,6 +1,6 @@
 import React from "react";
-import UserMenu from "../components/DropdownProfile";
 import ThemeToggle from "../components/ThemeToggle";
+import DropdownNotifications from "../components/DropdownNotifications";
 
 function Header({ sidebarOpen, setSidebarOpen, variant = "default" }) {
 
@@ -50,9 +50,8 @@ function Header({ sidebarOpen, setSidebarOpen, variant = "default" }) {
           {/* Header: Right side */}
           <div className="flex items-center space-x-3">
             <ThemeToggle />
-            {/*  Divider */}
-            <hr className="w-px h-6 bg-gray-200 dark:bg-gray-700/60 border-none" />
-            <UserMenu align="right" />
+            <DropdownNotifications />
+
           </div>
         </div>
       </div>
