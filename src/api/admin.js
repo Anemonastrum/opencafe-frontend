@@ -12,6 +12,7 @@ export function createAdminApi(request=apiRequest){
   deleteCategory:(key,o)=>request(`/api/categories/${id(key)}`,{...o,method:'DELETE'}),
   listProducts:(q={},o)=>list('/api/products',['page','limit','search','categoryId','isAvailable'],q,o),
   getProduct:(key,o)=>request(`/api/products/${id(key)}`,o),
+  deleteProduct:(key,o)=>request(`/api/products/${id(key)}`,{...o,method:'DELETE'}),
   saveProduct:(key,data,o)=>save('/api/products',key,data instanceof FormData?data:allowed(data,['name','price','description','categoryId','isAvailable','imageUrl']),o),
   setProductAvailability:(key,isAvailable,o)=>{if(typeof isAvailable!=='boolean')throw Error('Invalid availability');return save('/api/products',key,{isAvailable},o);},
   getCafe:o=>request('/api/cafe',o),

@@ -33,7 +33,7 @@ export function createClient({ http = axios.create(), lock = browserLock, onSess
     const me = await raw('/api/auth/me', { accessToken: data.accessToken });
     check(expected);
     if (!me?.user || me.user.id !== data.user.id) throw new ApiError('Invalid current user');
-    if (previousUser && (me.user.id !== previousUser.id || me.user.role !== previousUser.role || (!previousUser.mustChangePassword && me.user.mustChangePassword))) {
+    if (previousUser && (me.user.id !== previousUser.id || me.user.role !== previousUser.role)) {
       invalidate({ status: 'anonymous', user: null, error: new ApiError('Session changed. Sign in again.', 401) });
       check(expected);
     }
@@ -71,8 +71,7 @@ export function createClient({ http = axios.create(), lock = browserLock, onSess
       check(expected); return result;
     } catch (error) {
       check(expected);
-      if (error.code === 'PASSWORD_CHANGE_REQUIRED') invalidate({ user: { ...state.user, mustChangePassword: true } }, true);
-      else if (error.status === 403) invalidate({ status: 'error', user: null, error: new ApiError('Access changed. Restore session to verify current permissions.',403) });
+      if (error.status === 403) invalidate({ status: 'error', user: null, error: new ApiError('Access changed. Restore session to verify current permissions.',403) });
       else if (error.status === 401 && options.refresh !== false) invalidate({ status: 'anonymous', user: null, error });
       throw error;
     }

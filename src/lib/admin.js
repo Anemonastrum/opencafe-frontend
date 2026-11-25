@@ -1,4 +1,4 @@
-export const gateFor = user => !user ? '/login' : user.mustChangePassword ? '/change-password' : user.role !== 'ADMIN' ? '/unauthorized' : null;
+export const gateFor = user => !user ? '/login' : user.role !== 'ADMIN' ? '/unauthorized' : null;
 export const navigation = [['/dashboard','Dashboard'],['/sales-report','Sales report'],['/orders','Orders'],['/products','Products'],['/categories','Categories'],['/cashiers','Cashiers'],['/cafe-settings','Cafe settings'],['/profile','Profile']];
 export function formatMoney(value) {
  if(typeof value!=='string'||!/^(-?)(\d+)(?:\.(\d{1,2}))?$/.test(value))return 'Unavailable';
@@ -20,7 +20,7 @@ export const validId=value=>/^[1-9]\d{0,9}$/.test(String(value))&&Number(value)<
 export const queryString=record=>new URLSearchParams(Object.entries(record).filter(([,v])=>v!==''&&v!==undefined&&v!==null)).toString();
 export const textError=(value,max,bytes=Infinity)=>typeof value!=='string'||!value.isWellFormed()||!value.trim()||[...value.trim()].length>max||new TextEncoder().encode(value.trim()).length>bytes?`Enter nonempty text up to ${max} characters.`:null;
 export const usernameError=value=>typeof value!=='string'||! /^[A-Za-z0-9_.-]{1,100}$/.test(value)?'Username: 1–100 letters, digits, _, . or -.':null;
-export const passwordError=value=>typeof value!=='string'||!value.isWellFormed()||new TextEncoder().encode(value).length<12||new TextEncoder().encode(value).length>128?'Password must contain 12–128 UTF-8 bytes.':null;
+export const passwordError=value=>typeof value!=='string'||!value.isWellFormed()||new TextEncoder().encode(value).length<8||new TextEncoder().encode(value).length>128?'Password must contain 8–128 UTF-8 bytes.':null;
 export const priceError=value=>!/^\d{1,10}(\.\d{1,2})?$/.test(String(value))?'Price: 0–9999999999.99, at most two decimals.':null;
 export const taxError=value=>!/^\d{1,3}(\.\d{1,2})?$/.test(String(value))||Number(value)>100?'Tax rate: 0–100, at most two decimals.':null;
 export const imageError=file=>file&&(!/\.(jpe?g|png|webp)$/i.test(file.name)||!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5242880)?'Choose JPEG, PNG or WebP up to 5 MiB.':null;
