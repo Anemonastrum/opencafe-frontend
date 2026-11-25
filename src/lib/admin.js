@@ -38,6 +38,6 @@ export async function loadPages(load,{signal}={}) {
 }
 export function changedFields(original,draft) {return Object.fromEntries(Object.entries(draft).filter(([k,v])=>original[k]!==v));}
 export function downloadBlob({blob,type},{filename,mime}) {
- if(!type.toLowerCase().startsWith(mime))throw Error('Unexpected download format.');
+ if(!type.toLowerCase().startsWith(mime))throw Error('Download unavailable. Please retry.');
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
