@@ -1,4 +1,7 @@
-export const gateFor = user => !user ? '/login' : user.role !== 'ADMIN' ? '/unauthorized' : null;
+export const workspaceFor = user => !user ? '/login' : user.role === 'ADMIN' ? '/dashboard' : user.role === 'CASHIER' ? '/pos' : '/unauthorized';
+export const gateFor = (user,roles=['ADMIN']) => !user ? '/login' : roles.includes(user.role) ? null : workspaceFor(user);
+export const cashierNavigation = [['/pos','POS'],['/my-orders','My orders'],['/profile','Profile']];
+export const navigationFor = user => user?.role === 'CASHIER' ? cashierNavigation : navigation;
 export const navigation = [['/dashboard','Dashboard'],['/sales-report','Sales report'],['/orders','Orders'],['/products','Products'],['/categories','Categories'],['/cashiers','Cashiers'],['/cafe-settings','Cafe settings'],['/profile','Profile']];
 export function formatMoney(value) {
  if(typeof value!=='string'||!/^(-?)(\d+)(?:\.(\d{1,2}))?$/.test(value))return 'Unavailable';
