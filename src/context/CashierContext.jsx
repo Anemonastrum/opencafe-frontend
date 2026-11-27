@@ -149,7 +149,7 @@ function CashierSession({children,sessionKey,api}){
    if(!product||!Number.isInteger(product.id)||product.id<1||product.id>2147483647||typeof product.name!=='string'||!product.name.trim()||product.isAvailable===false)throw Error('Invalid or unavailable product');
    const price=fixedMoney(parseMoney(product.price)),cart=current.current.cart,index=cart.findIndex(item=>item.id===product.id);
    if(index<0&&cart.length===100)throw Error('Cart supports at most 100 distinct products');
-   const item=Object.freeze({id:product.id,name:product.name,price,quantity});publish({cart:Object.freeze(index<0?[...cart,item]:cart.map((old,i)=>i===index?item:old))});
+   const item=Object.freeze({id:product.id,name:product.name,price,quantity,...(typeof product.imageUrl==='string'&&product.imageUrl?{imageUrl:product.imageUrl}:{})});publish({cart:Object.freeze(index<0?[...cart,item]:cart.map((old,i)=>i===index?item:old))});
   },
   removeItem(key){editable();entry(key);publish({cart:Object.freeze(current.current.cart.filter(item=>String(item.id)!==String(key)))});},
   clearCart(){editable();publish({cart:Object.freeze([])});},

@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useId,useRef,useState} from 'react';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import {useCashier} from '../context/CashierContext';
@@ -18,15 +18,21 @@ function Qr({payment}){
  useEffect(()=>{setFailed(false);},[url]);
  useEffect(()=>{
   let active=true;setLocal(null);
-  if(payload&&(!url||failed))QRCode.toDataURL(payload,{errorCorrectionLevel:'M',margin:4,width:320}).then(value=>{if(active)setLocal(value);}).catch(()=>{});
+  if(payload&&(!url||failed))QRCode.toDataURL(payload,{errorCorrectionLevel:'M',margin:4,width:480}).then(value=>{if(active)setLocal(value);}).catch(()=>{});
   return()=>{active=false;};
  },[url,payload,failed]);
  const source=(!failed&&url)||local;
- return <div className="space-y-3">{source?<img src={source} alt="QRIS payment code" referrerPolicy="no-referrer" className="w-72 max-w-full h-auto bg-white rounded-lg" onError={()=>{setFailed(true);setLocal(null);}}/>:<p role="alert">No usable QR is available. Do not create another charge. Check status or ask an administrator to investigate.</p>}{payment.expiresAt&&<p className="text-sm">Provider expiry (Jakarta): {dateTime(payment.expiresAt)}. Time alone does not confirm expiry; only server status can release this attempt.</p>}</div>;
+ return <div className="space-y-3">{source?<img src={source} alt="QRIS payment code" referrerPolicy="no-referrer" className="w-full max-w-100 mx-auto h-auto bg-white rounded-lg" onError={()=>{setFailed(true);setLocal(null);}}/>:<p role="alert">No usable QR is available. Do not create another charge. Check status or ask an administrator to investigate.</p>}{payment.expiresAt&&<p className="text-sm">Provider expiry (Jakarta): {dateTime(payment.expiresAt)}. Time alone does not confirm expiry; only server status can release this attempt.</p>}</div>;
+}
+function QrModal({payment,order,onClose,trigger}){
+ const dialog=useRef(),title=useId();
+ useEffect(()=>{const element=dialog.current; element.showModal();return()=>{element.close();if(trigger.current?.isConnected)trigger.current.focus();};},[]);
+ return <dialog ref={dialog} aria-labelledby={title} onCancel={e=>{e.preventDefault();onClose();}} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl shadow-xl p-5 sm:p-6 m-auto w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto backdrop:bg-gray-950/60"><div className="flex items-center justify-between gap-4 mb-4"><h2 id={title} className="text-lg font-semibold">QRIS payment</h2><button type="button" className={secondary} onClick={onClose}>Close QR code</button></div><p className="text-center text-sm mb-1">{order.orderNumber}</p><p className="text-center text-2xl font-semibold mb-4">{formatMoney(payment.amount)}</p><Qr payment={payment}/><p className="text-sm mt-4">Scan with a QRIS-supported app. Payment completes only after server verification.</p></dialog>;
 }
 export default function CashierCheckout({data,disabled=false,onRefresh}){
  const pos=useCashier(),auth=useAuth(),id=data.order.id,saved=pos.paymentIntents[id];
  const [method,setMethod]=useState('CASH'),[cash,setCash]=useState(''),[confirmation,setConfirmation]=useState(null),[receipt,setReceipt]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[snapshot,setSnapshot]=useState(null),[checks,setChecks]=useState(0),[invalidEvidence,setInvalidEvidence]=useState('');
+ const [qr,setQr]=useState({paymentId:null,open:false}),qrTrigger=useRef();
  const guard=useRef(false),mounted=useRef(true),controllers=useRef(new Set()),latest=useRef(null),budget=useRef(0);
  const history=saved?.history||snapshot?.history||data.history;
  let reviewed,issue='';
@@ -39,6 +45,7 @@ export default function CashierCheckout({data,disabled=false,onRefresh}){
   : null;
  const state=saved?.status||payment?.status.toLowerCase();
  const active=payment?.method==='QRIS'&&payment.status==='PENDING'&&!issue;
+ useEffect(()=>{setQr({paymentId:active?payment.id:null,open:!!active});},[active,payment?.id]);
  const retryBlocked=disabled||!!pos.orderChanges[id]||!!issue||!!data.blocked||data.order.checkoutVersion!==saved?.intent.checkoutVersion;
  const blocked=disabled||!!pos.orderChanges[id]||!!issue||!!data.blocked||!!saved||order.status!=='PENDING';
  let amounts=null,inputError='';
@@ -121,9 +128,9 @@ export default function CashierCheckout({data,disabled=false,onRefresh}){
    if(mounted.current)downloadBlob(blob,{filename:`order_${id}_receipt.pdf`,mime:'application/pdf'});
   }catch(e){report(e);}finally{guard.current=false;if(mounted.current){setBusy(false);setReceipt(null);}}
  }
- return <Card title="Checkout"><div className="space-y-4"><FormError error={error}/>{issue&&<p role="alert">{issue}</p>}
+ return <><Card title="Checkout"><div className="space-y-4"><FormError error={error}/>{issue&&<p role="alert">{issue}</p>}
   {completion&&<><p role="status">Payment completion verified.</p><Money amounts={payment}/><div className="flex flex-wrap gap-3"><button className={secondary} disabled={busy} onClick={()=>setReceipt('generate')}>Generate and download receipt</button><button className={secondary} disabled={busy} onClick={()=>setReceipt('download')}>Download existing receipt</button></div></>}
-  {payment&&<><p role="status">Server payment status: {payment.status}</p>{active&&<Qr key={payment.id} payment={payment}/>}</>}
+  {payment&&<><p role="status">Server payment status: {payment.status}</p>{active&&<button type="button" ref={qrTrigger} className={secondary} onClick={()=>setQr({paymentId:payment.id,open:true})}>Show QR code</button>}</>}
   {saved&&!payment&&<p role="status">Saved payment: {state}. Do not create a replacement charge. Check payment history first.</p>}
   {saved?.error&&<FormError error={saved.error.message}/>}
   {saved?.status==='ready'&&!confirmation&&<button className={secondary} disabled={busy} onClick={reviewSaved}>Review saved payment</button>}
@@ -135,5 +142,5 @@ export default function CashierCheckout({data,disabled=false,onRefresh}){
   {!saved&&!payment&&<><Field label="Payment method">{fieldId=><select id={fieldId} className="form-select w-full" value={method} disabled={busy||blocked} onChange={e=>setMethod(e.target.value)}><option value="CASH">CASH</option><option value="QRIS">QRIS</option></select>}</Field>{method==='CASH'&&<Field label="Cash received" value={cash} inputMode="decimal" disabled={busy||blocked} onChange={e=>setCash(e.target.value)}/>}{amounts&&<Money amounts={amounts}/>}<FormError error={inputError}/><button className={primary} disabled={busy||blocked||!!inputError} onClick={review}>Review payment</button></>}
   {confirmation&&<ConfirmDialog title="Confirm payment?" confirmLabel="Confirm payment" busy={busy} onConfirm={pay} onClose={()=>{if(!busy){pos.discardPaymentIntent(id);setConfirmation(null);}}}><p>Order {order.orderNumber} · {confirmation.intent.method}. Confirm the captured total and tender before paying.</p><Money amounts={confirmation.amounts}/></ConfirmDialog>}
   {receipt&&<ConfirmDialog title="Download private receipt?" confirmLabel="Download receipt" busy={busy} onConfirm={download} onClose={()=>setReceipt(null)}><p>Receipt includes cafe, cashier and transaction details. Download only to a trusted device and share only with authorized recipients.</p></ConfirmDialog>}
- </div></Card>;
+ </div></Card>{active&&qr.open&&qr.paymentId===payment.id&&!confirmation&&<QrModal key={payment.id} payment={payment} order={order} trigger={qrTrigger} onClose={()=>setQr({paymentId:payment.id,open:false})}/>}</>;
 }
